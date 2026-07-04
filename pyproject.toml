@@ -1,0 +1,29 @@
+[project]
+name = "divvy"
+version = "0.1.0"
+description = "Replay your actual brokerage transaction history against a counterfactual portfolio bucket and compare dividend income + returns."
+readme = "README.md"
+authors = [
+    { name = "DanMat", email = "dannymatthew@gmail.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "pandas>=2.2",
+    "yfinance>=0.2.40",
+    "pyyaml>=6.0",
+    "matplotlib>=3.9",
+    "pyarrow>=17.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0"]
+
+[project.scripts]
+divvy = "divvy.cli:main"
+
+[build-system]
+requires = ["uv_build>=0.11.19,<0.12.0"]
+build-backend = "uv_build"
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
