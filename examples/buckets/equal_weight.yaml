@@ -1,0 +1,6 @@
+name: Equal weight
+weights:
+  SCHD: 0.25
+  DGRO: 0.25
+  VYM: 0.25
+  SDY: 0.25

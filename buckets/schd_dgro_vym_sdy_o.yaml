@@ -1,7 +1,0 @@
-name: SCHD/DGRO/VYM/SDY/O
-weights:
-  SCHD: 0.45
-  DGRO: 0.25
-  VYM: 0.15
-  SDY: 0.10
-  O: 0.05

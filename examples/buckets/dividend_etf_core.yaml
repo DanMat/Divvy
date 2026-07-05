@@ -1,0 +1,6 @@
+name: Dividend ETF core
+weights:
+  SCHD: 0.40
+  DGRO: 0.25
+  VYM: 0.20
+  SDY: 0.15

@@ -34,6 +34,25 @@ def _xirr(cashflows: list[tuple[pd.Timestamp, float]], guess: float = 0.1) -> fl
     return rate
 
 
+def _trailing_dividends_from_history(hist: pd.DataFrame, as_of: pd.Timestamp, months: int = 12) -> float:
+    """Dividend income received in the `months` before `as_of`, from a BacktestResult's cumulative history."""
+    if hist.empty:
+        return 0.0
+    window_start = as_of - pd.DateOffset(months=months)
+    end = hist[hist["date"] <= as_of]["total_dividends"]
+    start = hist[hist["date"] <= window_start]["total_dividends"]
+    end_val = float(end.iloc[-1]) if not end.empty else 0.0
+    start_val = float(start.iloc[-1]) if not start.empty else 0.0
+    return end_val - start_val
+
+
+def trailing_dividends_from_ledger(dividends_actual: pd.DataFrame, as_of: pd.Timestamp, months: int = 12) -> float:
+    """Dividend income actually received in the `months` before `as_of`, from a parsed ledger."""
+    window_start = as_of - pd.DateOffset(months=months)
+    mask = (dividends_actual["date"] > window_start) & (dividends_actual["date"] <= as_of)
+    return float(dividends_actual.loc[mask, "dividend"].sum())
+
+
 def dividend_cross_check(dividends_actual: pd.DataFrame, reference_totals: dict[int, float]) -> pd.DataFrame:
     """Compare parsed actual-dividend yearly totals against externally supplied reference totals (e.g. 1099s)."""
     by_year = dividends_actual.copy()
@@ -58,37 +77,47 @@ def dividend_cross_check(dividends_actual: pd.DataFrame, reference_totals: dict[
 
 def summarize(
     contributions: pd.DataFrame,
-    real_dividends_total: float,
-    real_ending_value: float,
-    real_as_of: pd.Timestamp,
     bucket_results: dict[str, tuple[BacktestResult, dict[str, pd.DataFrame]]],
+    real: tuple[float, float, pd.Timestamp, float] | None = None,
 ) -> pd.DataFrame:
-    """One row per variant: total contributed, dividends received, ending value, return %, XIRR."""
+    """One row per variant: total contributed, dividends received, ending value, return %, XIRR,
+    and trailing-12-month dividend income (the current annual income run-rate, vs. the
+    cumulative-since-inception `total_dividends` figure).
+
+    `real`, if given, is (real_dividends_total, real_ending_value, real_as_of,
+    real_trailing_12mo_dividends) for an actual account to compare against. Omit it for a
+    purely synthetic/hypothetical backtest.
+    """
     contrib_flows = [(row["date"], -row["contributed"]) for _, row in contributions.iterrows()]
     total_contributed = float(contributions["contributed"].sum())
 
     rows = []
-    real_flows = sorted(contrib_flows + [(real_as_of, real_ending_value)])
-    rows.append(
-        {
-            "variant": "Real (actual account)",
-            "total_contributed": total_contributed,
-            "total_dividends": real_dividends_total,
-            "ending_value": real_ending_value,
-            "total_return_pct": (real_ending_value - total_contributed) / total_contributed * 100,
-            "xirr_pct": _xirr(real_flows) * 100,
-        }
-    )
+    if real is not None:
+        real_dividends_total, real_ending_value, real_as_of, real_trailing = real
+        real_flows = sorted(contrib_flows + [(real_as_of, real_ending_value)])
+        rows.append(
+            {
+                "variant": "Real (actual account)",
+                "total_contributed": total_contributed,
+                "total_dividends": real_dividends_total,
+                "trailing_12mo_dividends": real_trailing,
+                "ending_value": real_ending_value,
+                "total_return_pct": (real_ending_value - total_contributed) / total_contributed * 100,
+                "xirr_pct": _xirr(real_flows) * 100,
+            }
+        )
 
     for label, (result, market_data) in bucket_results.items():
         ending_value = result.value(market_data)
         as_of = max(df.index.max() for df in market_data.values())
         flows = sorted(contrib_flows + [(as_of, ending_value)])
+        trailing = _trailing_dividends_from_history(result.history_df(), as_of)
         rows.append(
             {
                 "variant": label,
                 "total_contributed": result.total_contributed,
                 "total_dividends": result.total_dividends,
+                "trailing_12mo_dividends": trailing,
                 "ending_value": ending_value,
                 "total_return_pct": (ending_value - result.total_contributed) / result.total_contributed * 100,
                 "xirr_pct": _xirr(flows) * 100,
@@ -99,14 +128,15 @@ def summarize(
 
 
 def plot_dividends_over_time(
-    real_dividends: pd.DataFrame,
+    real_dividends: pd.DataFrame | None,
     bucket_results: dict[str, BacktestResult],
     out_path: Path,
 ) -> None:
     fig, ax = plt.subplots(figsize=(9, 5))
 
-    real_series = real_dividends.groupby("date")["dividend"].sum().sort_index().cumsum()
-    ax.plot(real_series.index, real_series.values, label="Real (actual account)")
+    if real_dividends is not None:
+        real_series = real_dividends.groupby("date")["dividend"].sum().sort_index().cumsum()
+        ax.plot(real_series.index, real_series.values, label="Real (actual account)")
 
     for label, result in bucket_results.items():
         hist = result.history_df()
@@ -134,11 +164,14 @@ def plot_value_over_time(
         snapshots = hist.groupby("date")["shares"].last().sort_index()
         dates, values = [], []
         for date, shares in snapshots.items():
-            value = sum(
-                qty * float(market_data[sym]["close"].loc[market_data[sym]["close"].index <= date].iloc[-1])
-                for sym, qty in shares.items()
-                if qty > 0
-            )
+            value = 0.0
+            for sym, qty in shares.items():
+                if qty <= 0:
+                    continue
+                prices = market_data[sym]["close"]
+                before = prices.index[prices.index <= date]
+                price = float(prices.loc[before[-1]]) if len(before) else float(prices.iloc[0])
+                value += qty * price
             dates.append(date)
             values.append(value)
         ax.plot(dates, values, label=label)
