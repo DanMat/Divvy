@@ -99,7 +99,27 @@ def render() -> None:
 
     st.sidebar.header("3 · Benchmark & run")
     add_benchmark = st.sidebar.checkbox("Include SPY benchmark", value=True)
+    with st.sidebar.expander("Realism (optional)"):
+        tax = st.slider(
+            "Dividend tax rate", 0.0, 0.5, 0.0, 0.01, help="Reinvest only the after-tax amount (taxable account)."
+        )
+        rebalance = st.selectbox("Rebalance", ["none", "annual", "quarterly", "monthly"], index=0)
+        expense_ratio = st.number_input(
+            "Expense ratio (all holdings)",
+            0.0,
+            0.05,
+            0.0,
+            0.0005,
+            format="%.4f",
+            help="Annual fund fee, e.g. 0.0006 = 0.06%.",
+        )
+    opts = {
+        "dividend_tax_rate": tax,
+        "rebalance": None if rebalance == "none" else rebalance,
+    }
     run = st.sidebar.button("▶ Run comparison", type="primary", use_container_width=True)
+    st.session_state["_opts"] = opts
+    st.session_state["_expense_ratio"] = expense_ratio
 
     st.info(f"**Contributions:** {source_label}")
 
@@ -112,6 +132,9 @@ def render() -> None:
         st.error("No contributions to run. Pick synthetic mode or upload a CSV.")
         return
 
+    opts = st.session_state.get("_opts", {})
+    flat_er = st.session_state.get("_expense_ratio", 0.0)
+
     variants: dict[str, tuple] = {}
     normalized_note: list[str] = []
     with st.spinner("Fetching prices & replaying contributions…"):
@@ -121,7 +144,8 @@ def render() -> None:
                 continue
             try:
                 data = _load_data(tuple(sorted(weights)), start)
-                result = run_backtest(contribs, weights, data)
+                er = {s: flat_er for s in weights} if flat_er else None
+                result = run_backtest(contribs, weights, data, expense_ratios=er, **opts)
             except Exception as exc:  # bad ticker, no data in window, etc.
                 st.warning(f"{label}: could not run ({exc}). Check the tickers.")
                 continue
@@ -131,7 +155,11 @@ def render() -> None:
         if add_benchmark:
             try:
                 bdata = _load_data(("SPY",), start)
-                variants["SPY (benchmark)"] = (run_backtest(contribs, {"SPY": 1.0}, bdata), bdata)
+                ber = {"SPY": flat_er} if flat_er else None
+                variants["SPY (benchmark)"] = (
+                    run_backtest(contribs, {"SPY": 1.0}, bdata, expense_ratios=ber, **opts),
+                    bdata,
+                )
             except Exception:
                 st.warning("Could not load the SPY benchmark.")
 
@@ -150,6 +178,7 @@ def render() -> None:
             {
                 "total_contributed": "${:,.0f}",
                 "total_dividends": "${:,.2f}",
+                "total_dividends_after_tax": "${:,.2f}",
                 "trailing_12mo_dividends": "${:,.2f}",
                 "ending_value": "${:,.0f}",
                 "total_return_pct": "{:.2f}%",

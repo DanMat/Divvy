@@ -53,18 +53,27 @@ def cmd_compare(args: argparse.Namespace) -> None:
     else:
         raise SystemExit("Provide a contribution source: --ledger, --synthetic-monthly, or --contributions-csv")
 
+    opts = {"dividend_tax_rate": args.dividend_tax_rate, "rebalance": args.rebalance}
+    er = {}  # per-holding expense ratios (flat --expense-ratio applied to all)
+
     variants: dict[str, tuple] = {}
     for bucket_path in args.bucket:
         bucket_path = Path(bucket_path)
         bucket = {sym: w for sym, w in _load_bucket(bucket_path).items() if w > 0}
         data = market_data.load_bucket_data(list(bucket), history_start, cache_dir)
-        result = run_backtest(contributions, bucket, data)
+        if args.expense_ratio:
+            er = {sym: args.expense_ratio for sym in bucket}
+        result = run_backtest(contributions, bucket, data, expense_ratios=er, **opts)
         variants[bucket_path.stem] = (result, data)
 
     benchmark = (args.benchmark or "").strip().upper()
     if benchmark and benchmark != "NONE":
         bdata = market_data.load_bucket_data([benchmark], history_start, cache_dir)
-        variants[f"{benchmark} (benchmark)"] = (run_backtest(contributions, {benchmark: 1.0}, bdata), bdata)
+        ber = {benchmark: args.expense_ratio} if args.expense_ratio else {}
+        variants[f"{benchmark} (benchmark)"] = (
+            run_backtest(contributions, {benchmark: 1.0}, bdata, expense_ratios=ber, **opts),
+            bdata,
+        )
 
     summary = report.summarize(contributions, bucket_results=variants, real=real)
 
@@ -132,6 +141,23 @@ def main() -> None:
         "--benchmark",
         default="SPY",
         help="Ticker to include as a benchmark row (default SPY; pass 'none' to disable)",
+    )
+    compare.add_argument(
+        "--dividend-tax-rate",
+        type=float,
+        default=0.0,
+        help="Tax rate on dividends (e.g. 0.20); reinvests only the after-tax amount (taxable-account model)",
+    )
+    compare.add_argument(
+        "--rebalance",
+        choices=["annual", "quarterly", "monthly"],
+        help="Rebalance to target weights on this cadence (default: none, let DRIP drift)",
+    )
+    compare.add_argument(
+        "--expense-ratio",
+        type=float,
+        default=0.0,
+        help="Annual fund expense ratio applied to every holding (e.g. 0.0006 for 0.06%%)",
     )
     compare.add_argument("--cache-dir", default="data/cache")
     compare.add_argument("--out", default="results")
