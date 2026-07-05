@@ -12,9 +12,13 @@
 [![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/)
 [![Built with uv](https://img.shields.io/badge/built%20with-uv-de5fe9.svg)](https://github.com/astral-sh/uv)
 
+**[🚀 Try the live demo](https://divvy-backtest.streamlit.app/) · [🌐 Website](https://danmat.github.io/Divvy/) · [📦 PyPI](https://pypi.org/project/divvy-backtest/)**
+
+<sub>The live demo runs on synthetic data — for your <em>real</em> numbers, run it locally so your financial data never leaves your machine.</sub>
+
 <br>
 
-<img src="docs/experiment-lab.gif" alt="Divvy Portfolio Experiment Lab — add portfolios, apply tax, and compare dividends & returns with live charts" width="900">
+<a href="https://divvy-backtest.streamlit.app/"><img src="docs/experiment-lab.gif" alt="Divvy Portfolio Experiment Lab — add portfolios, apply tax, and compare dividends & returns with live charts" width="900"></a>
 
 <sub><i>The interactive Experiment Lab: add portfolios, tweak the knobs, and compare dividends & returns live. (<code>divvy ui</code>)</i></sub>
 
