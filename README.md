@@ -13,9 +13,9 @@
 
 <br>
 
-<img src="docs/experiment-lab.png" alt="Divvy Portfolio Experiment Lab — compare portfolios side by side with live charts" width="900">
+<img src="docs/experiment-lab.gif" alt="Divvy Portfolio Experiment Lab — add portfolios, apply tax, and compare dividends & returns with live charts" width="900">
 
-<sub><i>The interactive Experiment Lab — tweak weights, hit run, compare. (<code>divvy ui</code>)</i></sub>
+<sub><i>The interactive Experiment Lab: add portfolios, tweak the knobs, and compare dividends & returns live. (<code>divvy ui</code>)</i></sub>
 
 </div>
 
