@@ -92,6 +92,21 @@ def cmd_import_1099(args: argparse.Namespace) -> None:
     print(by_year.round(2).to_string())
 
 
+def cmd_ui(args: argparse.Namespace) -> None:
+    import importlib.util
+    import subprocess
+    import sys
+
+    if importlib.util.find_spec("streamlit") is None:
+        raise SystemExit("The UI needs Streamlit. Install it with: pip install 'divvy[ui]'")
+
+    ui_path = importlib.util.find_spec("divvy.ui").origin
+    cmd = [sys.executable, "-m", "streamlit", "run", ui_path]
+    if args.port:
+        cmd += ["--server.port", str(args.port)]
+    subprocess.run(cmd, check=False)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(prog="divvy")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -126,6 +141,10 @@ def main() -> None:
     imp.add_argument("--pdf", required=True, help="Path to a Fidelity Consolidated 1099 PDF")
     imp.add_argument("--out", required=True, help="Output CSV path (date,symbol,dividend)")
     imp.set_defaults(func=cmd_import_1099)
+
+    ui = sub.add_parser("ui", help="Launch the interactive Portfolio Experiment Lab in your browser")
+    ui.add_argument("--port", type=int, help="Port for the local Streamlit server (optional)")
+    ui.set_defaults(func=cmd_ui)
 
     args = parser.parse_args()
     args.func(args)
