@@ -32,15 +32,23 @@ def _fetch(symbol: str, start: str) -> pd.DataFrame:
 
 
 def load_symbol(symbol: str, start: str, cache_dir: str | Path = DEFAULT_CACHE_DIR) -> pd.DataFrame:
-    """Daily close price + per-share dividend (0 on non-ex-dates) for `symbol` from `start`, cached on disk."""
+    """Daily close price + per-share dividend (0 on non-ex-dates) for `symbol` from `start`, cached on disk.
+
+    The cache stores each symbol's full fetched history and is sliced to `start`. If a cached file
+    doesn't reach back to `start` (e.g. a prior run used a later start), it is re-fetched — so an
+    earlier start never silently returns truncated data.
+    """
     cache_dir = Path(cache_dir)
     cache_dir.mkdir(parents=True, exist_ok=True)
+    start_ts = pd.Timestamp(start)
     path = cache_dir / f"{symbol}.parquet"
     if path.exists():
-        return pd.read_parquet(path)
+        df = pd.read_parquet(path)
+        if not df.empty and df.index.min() <= start_ts:
+            return df[df.index >= start_ts]
     df = _fetch(symbol, start)
     df.to_parquet(path)
-    return df
+    return df[df.index >= start_ts]
 
 
 def load_bucket_data(

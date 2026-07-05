@@ -97,7 +97,8 @@ def render() -> None:
     contribs, start, source_label = _contribution_source()
     editors = _bucket_editors()
 
-    st.sidebar.header("3 · Run")
+    st.sidebar.header("3 · Benchmark & run")
+    add_benchmark = st.sidebar.checkbox("Include SPY benchmark", value=True)
     run = st.sidebar.button("▶ Run comparison", type="primary", use_container_width=True)
 
     st.info(f"**Contributions:** {source_label}")
@@ -127,6 +128,13 @@ def render() -> None:
             variants[label] = (result, data)
             normalized_note.append(f"**{label}:** " + ", ".join(f"{s} {w:.0%}" for s, w in weights.items()))
 
+        if add_benchmark:
+            try:
+                bdata = _load_data(("SPY",), start)
+                variants["SPY (benchmark)"] = (run_backtest(contribs, {"SPY": 1.0}, bdata), bdata)
+            except Exception:
+                st.warning("Could not load the SPY benchmark.")
+
     if not variants:
         st.error("No valid portfolios. Add tickers with positive weights.")
         return
@@ -146,10 +154,17 @@ def render() -> None:
                 "ending_value": "${:,.0f}",
                 "total_return_pct": "{:.2f}%",
                 "xirr_pct": "{:.2f}%",
-            }
+                "max_drawdown_pct": "{:.1f}%",
+                "annual_vol_pct": "{:.1f}%",
+            },
+            na_rep="—",
         ),
         use_container_width=True,
         hide_index=True,
+    )
+    st.caption(
+        "**max_drawdown_pct** and **annual_vol_pct** describe each basket's own risk "
+        "(worst peak-to-trough drop and annualized volatility) — lower is calmer."
     )
 
     col1, col2 = st.columns(2)
@@ -159,6 +174,12 @@ def render() -> None:
     with col2:
         st.subheader("Cumulative dividends received")
         st.line_chart(_combine({k: report.cumulative_dividends(v[0]) for k, v in variants.items()}))
+
+    st.subheader("Dividend income by year")
+    annual = {k: report.annual_dividends(v[0]) for k, v in variants.items()}
+    annual = {k: v for k, v in annual.items() if not v.empty}
+    if annual:
+        st.bar_chart(pd.concat(annual, axis=1).fillna(0.0))
 
     _disclaimer()
 
