@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Divvy — backtest your real investing history against a different portfolio</title>
+<meta name="description" content="Replay the exact money you actually invested into a different portfolio and compare the dividends and returns you'd have earned. Free, local, open-source." />
+<meta property="og:title" content="Divvy — replay your real investing history against any portfolio" />
+<meta property="og:description" content="Backtest your actual contributions (not a synthetic $X/month) into a different basket of ETFs/stocks and compare dividends, returns, and risk." />
+<meta property="og:image" content="https://danmat.github.io/Divvy/experiment-lab.png" />
+<meta name="twitter:card" content="summary_large_image" />
+<style>
+  :root {
+    --bg: #0d1117; --panel: #161b22; --border: #30363d;
+    --text: #e6edf3; --muted: #9198a1; --accent: #2ea043; --accent2: #3fb950; --link: #58a6ff;
+    --radius: 12px; --maxw: 960px;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  }
+  a { color: var(--link); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  .wrap { max-width: var(--maxw); margin: 0 auto; padding: 0 20px; }
+
+  header.hero {
+    text-align: center; padding: 72px 20px 40px;
+    background: radial-gradient(1200px 400px at 50% -10%, rgba(46,160,67,.18), transparent 70%);
+  }
+  .logo { font-size: 56px; margin: 0; }
+  h1 { font-size: clamp(28px, 5vw, 44px); margin: 8px 0 6px; letter-spacing: -0.02em; }
+  .tagline { color: var(--muted); font-size: clamp(16px, 2.6vw, 20px); max-width: 640px; margin: 0 auto 8px; }
+  .subtag { color: var(--text); font-size: clamp(15px, 2.4vw, 18px); max-width: 680px; margin: 14px auto 26px; }
+  .badges { margin: 14px 0 26px; }
+  .badges img { height: 20px; margin: 0 3px; vertical-align: middle; }
+
+  .cta { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+  .btn {
+    display: inline-block; padding: 11px 20px; border-radius: 8px; font-weight: 600;
+    border: 1px solid var(--border); color: var(--text); background: var(--panel);
+  }
+  .btn:hover { text-decoration: none; border-color: var(--muted); }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn.primary:hover { background: var(--accent2); }
+  .demo-note { color: var(--muted); font-size: 13px; margin-top: 12px; }
+
+  section { padding: 44px 0; border-top: 1px solid var(--border); }
+  section h2 { font-size: clamp(22px, 3.4vw, 30px); margin: 0 0 8px; letter-spacing: -0.01em; }
+  .lead { color: var(--muted); max-width: 720px; }
+  .quote {
+    border-left: 3px solid var(--accent); padding: 8px 0 8px 16px; margin: 22px 0 0;
+    color: var(--text); font-size: 18px;
+  }
+
+  .shot { text-align: center; }
+  .shot img { max-width: 100%; border: 1px solid var(--border); border-radius: var(--radius); }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 16px; margin-top: 22px; }
+  .card { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; }
+  .card h3 { margin: 0 0 6px; font-size: 17px; }
+  .card p { margin: 0; color: var(--muted); font-size: 14.5px; }
+
+  pre {
+    background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 16px 18px; overflow-x: auto; font-size: 14px;
+  }
+  code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+
+  .warn {
+    background: rgba(187, 128, 9, .12); border: 1px solid rgba(187, 128, 9, .4);
+    border-radius: var(--radius); padding: 14px 18px; color: #e3b341; font-size: 14.5px;
+  }
+  footer { text-align: center; color: var(--muted); padding: 40px 20px 60px; font-size: 14px; }
+</style>
+</head>
+<body>
+  <header class="hero">
+    <div class="wrap">
+      <p class="logo">💸</p>
+      <h1>Divvy</h1>
+      <p class="tagline"><em>"What if I'd invested my money into <strong>that</strong> portfolio instead?"</em></p>
+      <p class="subtag">Replay the <strong>exact money you actually invested</strong> — the real dates, the real amounts — into a different basket of ETFs/stocks, and see the dividends and returns you <em>would</em> have earned.</p>
+      <div class="badges">
+        <a href="https://pypi.org/project/divvy-backtest/"><img src="https://img.shields.io/pypi/v/divvy-backtest.svg" alt="PyPI" /></a>
+        <a href="https://github.com/DanMat/Divvy/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="MIT" /></a>
+        <img src="https://img.shields.io/badge/python-3.12+-blue.svg" alt="Python 3.12+" />
+      </div>
+      <div class="cta">
+        <a class="btn primary" href="https://divvy-backtest.streamlit.app">🚀 Try the live demo</a>
+        <a class="btn" href="https://github.com/DanMat/Divvy">⭐ Star on GitHub</a>
+        <a class="btn" href="#install">📦 pip install</a>
+      </div>
+      <p class="demo-note">The live demo runs on synthetic data. For your <em>real</em> numbers, run it locally — your financial data never leaves your machine.</p>
+    </div>
+  </header>
+
+  <section>
+    <div class="wrap">
+      <h2>Why it's different</h2>
+      <p class="lead">Every backtester on the internet (Portfolio Visualizer and friends) simulates a make-believe "$X every month." Nobody's contributions look like that — real life is lumpy dates and amounts. Divvy replays your <strong>genuine</strong> contribution calendar (from a broker export, a plain <code>date,amount</code> CSV, or a 1099 dividend import) into whatever portfolio you're curious about, with dividend reinvestment (DRIP).</p>
+      <p class="quote">💡 "If I'd put the exact money I actually invested into <strong>this</strong> basket instead, how much more — in dividends specifically, and in total — would I have made?"</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap shot">
+      <h2>See it in action</h2>
+      <p class="lead" style="margin: 0 auto 20px;">Add portfolios, tweak the knobs, and compare dividends &amp; returns live.</p>
+      <img src="experiment-lab.gif" alt="Divvy Portfolio Experiment Lab demo" />
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <h2>Features</h2>
+      <div class="grid">
+        <div class="card"><h3>🔁 Real-ledger replay</h3><p>Your actual contribution calendar, not a synthetic assumption.</p></div>
+        <div class="card"><h3>💵 Dividends first-class</h3><p>Lifetime and trailing-12-month run-rate — the number income investors care about.</p></div>
+        <div class="card"><h3>📈 Honest comparison</h3><p>Money-weighted XIRR, an SPY benchmark row, max drawdown &amp; volatility.</p></div>
+        <div class="card"><h3>🧪 Experiment Lab</h3><p>A local web app to add/remove tickers, tweak weights, and compare live.</p></div>
+        <div class="card"><h3>🎛️ Realism knobs</h3><p>Optional after-tax dividends, rebalancing, and expense-ratio drag.</p></div>
+        <div class="card"><h3>🔒 Private by default</h3><p>All financial data stays on your machine. Nothing uploaded, nothing committed.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="install">
+    <div class="wrap">
+      <h2>Install &amp; try it in 30 seconds</h2>
+      <p class="lead">No data required — kick the tires with synthetic mode:</p>
+      <pre><code>pip install 'divvy-backtest[ui]'
+
+# zero-data quickstart
+divvy compare --synthetic-monthly 500 --synthetic-start 2019-01-01 \
+  --bucket examples/buckets/dividend_etf_core.yaml \
+  --bucket examples/buckets/high_yield_tilt.yaml
+
+# or launch the interactive Experiment Lab
+divvy ui</code></pre>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <h2>How it works</h2>
+      <p class="lead">Contributions and each holding's ex-dividend dates are merged into one chronological event stream. Contributions buy shares at that day's close; dividends are reinvested (DRIP) into the same holding. Returns use money-weighted <strong>XIRR</strong> so lumpy cash flows are handled honestly, and risk metrics come from a contribution-free NAV so drawdown/volatility reflect the basket itself.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <div class="warn"><strong>⚠️ A backtester, not a crystal ball.</strong> Divvy describes what already happened over one window. Past performance does not predict the future, and nothing here is personalized financial advice — do your own research.</div>
+    </div>
+  </section>
+
+  <footer>
+    <div class="wrap">
+      <a href="https://github.com/DanMat/Divvy">GitHub</a> ·
+      <a href="https://pypi.org/project/divvy-backtest/">PyPI</a> ·
+      <a href="https://github.com/DanMat/Divvy/issues">Issues</a> ·
+      MIT License
+      <p>Made with 💸 — <code>pip install divvy-backtest</code></p>
+    </div>
+  </footer>
+</body>
+</html>
