@@ -11,6 +11,12 @@
 [![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/)
 [![Built with uv](https://img.shields.io/badge/built%20with-uv-de5fe9.svg)](https://github.com/astral-sh/uv)
 
+<br>
+
+<img src="docs/experiment-lab.png" alt="Divvy Portfolio Experiment Lab — compare portfolios side by side with live charts" width="900">
+
+<sub><i>The interactive Experiment Lab — tweak weights, hit run, compare. (<code>divvy ui</code>)</i></sub>
+
 </div>
 
 ---
