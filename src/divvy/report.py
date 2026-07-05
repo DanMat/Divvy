@@ -188,7 +188,10 @@ def plot_value_over_time(
 def _df_to_markdown(df: pd.DataFrame) -> str:
     header = "| " + " | ".join(df.columns) + " |"
     sep = "| " + " | ".join(["---"] * len(df.columns)) + " |"
-    rows = ["| " + " | ".join(f"{v:.2f}" if isinstance(v, float) else str(v) for v in row) + " |" for row in df.itertuples(index=False)]
+    rows = [
+        "| " + " | ".join(f"{v:.2f}" if isinstance(v, float) else str(v) for v in row) + " |"
+        for row in df.itertuples(index=False)
+    ]
     return "\n".join([header, sep, *rows])
 
 

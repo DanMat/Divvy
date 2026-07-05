@@ -1,16 +1,43 @@
-# Divvy
+<div align="center">
 
-**Replay your real investing history against a *different* portfolio, and compare the dividends and returns you'd have earned.**
+# 💸 Divvy
 
-Most backtesters (Portfolio Visualizer and friends) simulate a synthetic "$X invested every month." Divvy does that too — but it can also replay your **actual contribution history** (the real dates and dollar amounts you invested, from your broker) into a hypothetical set of holdings, so you can answer:
+### *"What if I'd invested my money into **that** portfolio instead?"*
 
-> *"If I'd put the exact money I actually invested into **this** basket of ETFs/stocks instead, how much more (or less) would I have made — in dividends specifically, and in total?"*
+**Replay your real investing history against a different set of holdings — and see the dividends and returns you *would* have earned.**
 
-Dividends are reinvested (DRIP) into the same holding, mirroring a real brokerage account, so the comparison compounds the way your account actually does.
+[![CI](https://github.com/DanMat/Divvy/actions/workflows/ci.yml/badge.svg)](https://github.com/DanMat/Divvy/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/)
+[![Built with uv](https://img.shields.io/badge/built%20with-uv-de5fe9.svg)](https://github.com/astral-sh/uv)
+
+</div>
 
 ---
 
-## Quickstart (no data required)
+Every backtester on the internet (Portfolio Visualizer and friends) simulates a *make-believe* "$X every month." **Divvy is different: it replays the exact money you actually invested** — the real dates, the real dollar amounts, straight from your broker — into whatever portfolio you're curious about. So instead of a hypothetical, you get *your* answer:
+
+> 💡 *"If I'd put the exact money I actually invested into **this** basket of ETFs/stocks instead, how much more — in dividends specifically, and in total — would I have made?"*
+
+Dividends get reinvested (DRIP) into the same holding, so it compounds exactly like a real brokerage account.
+
+### Why it exists
+
+No off-the-shelf tool does this. They all assume a clean, synthetic contribution schedule. Real investing is lumpy — you skip months, you add lump sums, you rebalance. Divvy replays your **actual** cash-flow history against a counterfactual portfolio, and reports on **dividend income** as a first-class metric (not just total return) — the thing dividend investors actually care about.
+
+### ✨ Features
+
+- 🔁 **Real-ledger replay** — your actual contribution calendar, not a synthetic assumption
+- 🧺 **Compare any number of "buckets"** (portfolios) side by side from simple YAML
+- 💵 **Dividends as a first-class metric** — lifetime *and* trailing-12-month run-rate
+- 📈 **DRIP compounding**, money-weighted return (XIRR), equity & dividend charts
+- 🚀 **Zero-data quickstart** — try it in 10 seconds with synthetic mode
+- 🔌 **Bring your own data** — generic CSV, or a Fidelity ledger / 1099 importer
+- 🔒 **Private by default** — your financial data never leaves your machine
+
+---
+
+## ⚡ Quickstart (no data required)
 
 Backtest a hypothetical "$500/month since 2019" into a couple of dividend baskets:
 
@@ -22,7 +49,17 @@ uv run divvy compare \
   --bucket examples/buckets/high_yield_tilt.yaml
 ```
 
-You'll get a table of total contributed, dividends received, current annual dividend run-rate, ending value, total return, and money-weighted return (XIRR) for each basket — plus charts in `results/<date>/`.
+…and out comes a side-by-side comparison, plus equity & dividend charts in `results/<date>/`:
+
+```text
+          variant  total_contributed  total_dividends  trailing_12mo_dividends  ending_value  total_return_pct  xirr_pct
+dividend_etf_core             7200.0           764.12                   294.02      11641.27             61.68     12.47
+  high_yield_tilt             7200.0           958.87                   336.69      11277.28             56.63     11.61
+```
+
+*(illustrative output from the bundled example data)*
+
+---
 
 ## Bring your own contributions
 
@@ -92,12 +129,28 @@ uv run divvy import-1099 --pdf 2025-Consolidated-1099.pdf --out dividends_2025.c
 | `total_return_pct` | `(ending_value − contributed) / contributed` |
 | `xirr_pct` | Money-weighted annualized return (accounts for contribution timing) |
 
+---
+
+## ⚠️ This is a backtester, not a crystal ball
+
+> [!WARNING]
+> **Divvy is an analysis tool, not investment advice — and backtest results are not gospel.**
+>
+> - A backtest only tells you what **already happened** over one specific window. It says **nothing** about the future. A basket that crushed it over the last 3 years can easily lag over the next 3.
+> - Past performance does **not** predict future results. Dividends can be cut, and any single stock can fall hard (the high-yield names that look best in a backtest often carry the most risk).
+> - The projection helper (`divvy.project`) is built entirely on **assumptions you choose** (future return, yield, tax). Treat its output as a *range of scenarios*, not a promise.
+> - Divvy does not know your taxes, fees, goals, or risk tolerance. **Nothing here is personalized financial advice.** Do your own research and, for real money decisions, talk to a licensed advisor.
+>
+> Use Divvy to *ask better questions* about your portfolio — not to get a "winner" to blindly follow.
+
+---
+
 ## Data sources
 
 - **Prices & dividend history:** [yfinance](https://github.com/ranaroussi/yfinance) (free, no key), cached to `data/cache/`.
 - **Finviz Elite (optional):** if you have a key, copy `.env.example` to `.env` and add it — used only for ad-hoc yield/screening lookups, **not** required for the core backtest.
 
-## Privacy
+## 🔒 Privacy
 
 Your financial data never leaves your machine and is never committed: `data/`, `results/`, your personal `buckets/`, and `.env` are all gitignored. Only code and the fake `examples/` data live in the repo.
 
@@ -108,10 +161,14 @@ uv sync --extra dev   # or: pip install -e '.[dev]'
 uv run pytest
 ```
 
-## Caveats
-
-This is a personal analysis tool, not investment advice. Backtests describe the past; a basket that won over one window can lag in the next. Projections (`divvy.project`) rest on assumptions you choose — treat them as ranges, not predictions.
+See [CONTRIBUTING.md](CONTRIBUTING.md) — new broker adapters and 1099 importers are especially welcome.
 
 ## License
 
 MIT — see [LICENSE](LICENSE).
+
+<div align="center">
+
+**Found this useful? Give it a ⭐ — it helps other dividend investors find it.**
+
+</div>

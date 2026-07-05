@@ -43,6 +43,8 @@ def load_symbol(symbol: str, start: str, cache_dir: str | Path = DEFAULT_CACHE_D
     return df
 
 
-def load_bucket_data(symbols: list[str], start: str, cache_dir: str | Path = DEFAULT_CACHE_DIR) -> dict[str, pd.DataFrame]:
+def load_bucket_data(
+    symbols: list[str], start: str, cache_dir: str | Path = DEFAULT_CACHE_DIR
+) -> dict[str, pd.DataFrame]:
     """Price + dividend history for every symbol in a bucket."""
     return {symbol: load_symbol(symbol, start, cache_dir) for symbol in symbols}

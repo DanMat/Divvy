@@ -51,9 +51,7 @@ def cmd_compare(args: argparse.Namespace) -> None:
         contributions = contrib_mod.load_contributions_csv(args.contributions_csv)
         history_start = contributions["date"].min().strftime("%Y-%m-%d")
     else:
-        raise SystemExit(
-            "Provide a contribution source: --ledger, --synthetic-monthly, or --contributions-csv"
-        )
+        raise SystemExit("Provide a contribution source: --ledger, --synthetic-monthly, or --contributions-csv")
 
     variants: dict[str, tuple] = {}
     for bucket_path in args.bucket:
@@ -101,7 +99,9 @@ def main() -> None:
     compare = sub.add_parser(
         "compare", help="Backtest one or more buckets against a real ledger or a synthetic contribution schedule"
     )
-    compare.add_argument("--ledger", help="Directory of Fidelity transaction-history CSVs (auto-derives contributions + real dividends)")
+    compare.add_argument(
+        "--ledger", help="Directory of Fidelity transaction-history CSVs (auto-derives contributions + real dividends)"
+    )
     compare.add_argument("--contributions-csv", help="Generic date,amount CSV of your contributions (any broker)")
     compare.add_argument("--synthetic-monthly", type=float, help="Flat $ amount contributed monthly (no data needed)")
     compare.add_argument("--synthetic-start", help="Start date for --synthetic-monthly (YYYY-MM-DD)")
@@ -109,7 +109,9 @@ def main() -> None:
     compare.add_argument("--bucket", action="append", required=True, help="Bucket YAML path (repeatable)")
     compare.add_argument("--cache-dir", default="data/cache")
     compare.add_argument("--out", default="results")
-    compare.add_argument("--start", default=DEFAULT_START, help="Earliest date to fetch price/dividend history for (--ledger mode)")
+    compare.add_argument(
+        "--start", default=DEFAULT_START, help="Earliest date to fetch price/dividend history for (--ledger mode)"
+    )
     compare.add_argument("--real-value", type=float, help="Actual account's current total value (--ledger mode)")
     compare.add_argument("--real-as-of", help="Date --real-value was observed, YYYY-MM-DD (--ledger mode)")
     compare.add_argument(
