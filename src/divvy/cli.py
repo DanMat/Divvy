@@ -19,6 +19,24 @@ def _load_bucket(path: Path) -> dict[str, float]:
     return yaml.safe_load(path.read_text())["weights"]
 
 
+def _parse_holdings(spec: str) -> dict[str, float]:
+    """Parse inline holdings like 'SCHD=45,DGRO=25,VYM=15,SDY=15' into normalized weights."""
+    weights: dict[str, float] = {}
+    for part in spec.split(","):
+        part = part.strip()
+        if not part:
+            continue
+        sym, sep, w = part.partition("=")
+        if not sep:
+            raise SystemExit(f"Bad --holdings entry {part!r}; expected TICKER=weight")
+        sym = sym.strip().upper()
+        weights[sym] = weights.get(sym, 0.0) + float(w)
+    total = sum(weights.values())
+    if total <= 0:
+        raise SystemExit(f"--holdings needs positive weights: {spec!r}")
+    return {sym: w / total for sym, w in weights.items()}
+
+
 def _parse_year_amount(value: str) -> tuple[int, float]:
     year, amount = value.split("=")
     return int(year), float(amount)
@@ -54,17 +72,27 @@ def cmd_compare(args: argparse.Namespace) -> None:
         raise SystemExit("Provide a contribution source: --ledger, --synthetic-monthly, or --contributions-csv")
 
     opts = {"dividend_tax_rate": args.dividend_tax_rate, "rebalance": args.rebalance}
-    er = {}  # per-holding expense ratios (flat --expense-ratio applied to all)
+
+    # Buckets come from YAML files (--bucket) and/or inline specs (--holdings).
+    buckets: list[tuple[str, dict[str, float]]] = []
+    for bucket_path in args.bucket or []:
+        p = Path(bucket_path)
+        buckets.append((p.stem, {sym: w for sym, w in _load_bucket(p).items() if w > 0}))
+    for spec in args.holdings or []:
+        weights = _parse_holdings(spec)
+        label = "/".join(list(weights)[:4]) + ("…" if len(weights) > 4 else "")
+        buckets.append((label, weights))
+    if not buckets:
+        raise SystemExit("Provide at least one --bucket <file.yaml> or --holdings 'TICKER=weight,...'")
 
     variants: dict[str, tuple] = {}
-    for bucket_path in args.bucket:
-        bucket_path = Path(bucket_path)
-        bucket = {sym: w for sym, w in _load_bucket(bucket_path).items() if w > 0}
+    for label, bucket in buckets:
+        while label in variants:
+            label += "*"
         data = market_data.load_bucket_data(list(bucket), history_start, cache_dir)
-        if args.expense_ratio:
-            er = {sym: args.expense_ratio for sym in bucket}
+        er = {sym: args.expense_ratio for sym in bucket} if args.expense_ratio else {}
         result = run_backtest(contributions, bucket, data, expense_ratios=er, **opts)
-        variants[bucket_path.stem] = (result, data)
+        variants[label] = (result, data)
 
     benchmark = (args.benchmark or "").strip().upper()
     if benchmark and benchmark != "NONE":
@@ -173,7 +201,13 @@ def main() -> None:
     compare.add_argument("--synthetic-monthly", type=float, help="Flat $ amount contributed monthly (no data needed)")
     compare.add_argument("--synthetic-start", help="Start date for --synthetic-monthly (YYYY-MM-DD)")
     compare.add_argument("--synthetic-end", help="End date for --synthetic-monthly (default: today)")
-    compare.add_argument("--bucket", action="append", required=True, help="Bucket YAML path (repeatable)")
+    compare.add_argument("--bucket", action="append", help="Bucket YAML file path (repeatable)")
+    compare.add_argument(
+        "--holdings",
+        action="append",
+        metavar="TICKER=weight,...",
+        help="Define a bucket inline, e.g. 'SCHD=45,DGRO=25,VYM=15,SDY=15' (repeatable; no file needed)",
+    )
     compare.add_argument(
         "--benchmark",
         default="SPY",

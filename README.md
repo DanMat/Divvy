@@ -58,17 +58,19 @@ pip install 'divvy-backtest[ui]'    # + interactive Experiment Lab
 
 Or run from source with [uv](https://github.com/astral-sh/uv): `uv sync`.
 
-## ⚡ Quickstart (no data required)
+## ⚡ Quickstart (no data, no files)
 
-Backtest a hypothetical "$500/month since 2019" into a couple of dividend baskets:
+Backtest a hypothetical "$500/month since 2019" into a couple of dividend baskets — define them inline with `--holdings` (weights are auto-normalized), so this runs from anywhere:
 
 ```bash
-uv sync
-uv run divvy compare \
-  --synthetic-monthly 500 --synthetic-start 2019-01-01 \
-  --bucket examples/buckets/dividend_etf_core.yaml \
-  --bucket examples/buckets/high_yield_tilt.yaml
+pip install divvy-backtest
+
+divvy compare --synthetic-monthly 500 --synthetic-start 2019-01-01 \
+  --holdings "SCHD=45,DGRO=25,VYM=15,SDY=15" \
+  --holdings "SCHD=40,VYM=20,SDY=20,SPYD=20"
 ```
+
+Prefer files? Pass `--bucket path/to/bucket.yaml` instead (see [Define a bucket](#define-a-bucket-a-candidate-portfolio)).
 
 …and out comes a side-by-side comparison, plus equity & dividend charts in `results/<date>/`:
 
@@ -106,9 +108,8 @@ date,amount
 ```
 
 ```bash
-uv run divvy compare \
-  --contributions-csv my_contributions.csv \
-  --bucket examples/buckets/dividend_etf_core.yaml
+divvy compare --contributions-csv my_contributions.csv \
+  --holdings "SCHD=45,DGRO=25,VYM=15,SDY=15"
 ```
 
 See [`examples/contributions.csv`](examples/contributions.csv) for a full sample.
@@ -126,16 +127,15 @@ weights:
   ABBV: 0.15
 ```
 
-Drop new buckets in your own `buckets/` folder (gitignored) and pass as many `--bucket` flags as you like to compare them side by side.
+Pass as many `--bucket` flags as you like to compare them side by side — or skip files entirely with inline `--holdings "SCHD=45,DGRO=25,VYM=15,SDY=15"` (repeatable, weights auto-normalized).
 
 ## Compare against your *actual* Fidelity account
 
 If you export your Fidelity transaction history CSVs, Divvy can auto-derive both your real contribution calendar **and** the real dividends you received, and add your actual account as a comparison row:
 
 ```bash
-uv run divvy compare \
-  --ledger path/to/fidelity_history_csvs/ \
-  --bucket examples/buckets/dividend_etf_core.yaml \
+divvy compare --ledger path/to/fidelity_history_csvs/ \
+  --holdings "SCHD=45,DGRO=25,VYM=15,SDY=15" \
   --real-value 12345.67 --real-as-of 2026-07-03
 ```
 
