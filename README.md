@@ -31,6 +31,7 @@ No off-the-shelf tool does this. They all assume a clean, synthetic contribution
 - 🧺 **Compare any number of "buckets"** (portfolios) side by side from simple YAML
 - 💵 **Dividends as a first-class metric** — lifetime *and* trailing-12-month run-rate
 - 📈 **DRIP compounding**, money-weighted return (XIRR), equity & dividend charts
+- 🧪 **Interactive Experiment Lab** — a local web app to tweak weights with sliders and compare live
 - 🚀 **Zero-data quickstart** — try it in 10 seconds with synthetic mode
 - 🔌 **Bring your own data** — generic CSV, or a Fidelity ledger / 1099 importer
 - 🔒 **Private by default** — your financial data never leaves your machine
@@ -58,6 +59,19 @@ dividend_etf_core             7200.0           764.12                   294.02  
 ```
 
 *(illustrative output from the bundled example data)*
+
+---
+
+## 🧪 Interactive Experiment Lab
+
+Prefer sliders to flags? Launch the local web app and tweak portfolios live — add/remove tickers, drag weights, and watch the comparison table and charts update:
+
+```bash
+pip install 'divvy[ui]'   # or: uv sync --extra ui
+uv run divvy ui
+```
+
+It opens in your browser (running 100% locally — no data leaves your machine): pick a contribution source, edit one or more portfolios in the sidebar, hit **Run comparison**, and get headline metrics, a sortable table, and interactive value & dividend charts.
 
 ---
 

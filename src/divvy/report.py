@@ -127,6 +127,40 @@ def summarize(
     return pd.DataFrame(rows)
 
 
+def value_over_time(result: BacktestResult, market_data: dict[str, pd.DataFrame]) -> pd.Series:
+    """Portfolio market value at each event date (date-indexed Series). Shared by the PNG report and the UI."""
+    hist = result.history_df()
+    if hist.empty:
+        return pd.Series(dtype=float)
+    snapshots = hist.groupby("date")["shares"].last().sort_index()
+    dates, values = [], []
+    for date, shares in snapshots.items():
+        value = 0.0
+        for sym, qty in shares.items():
+            if qty <= 0:
+                continue
+            prices = market_data[sym]["close"]
+            before = prices.index[prices.index <= date]
+            price = float(prices.loc[before[-1]]) if len(before) else float(prices.iloc[0])
+            value += qty * price
+        dates.append(date)
+        values.append(value)
+    return pd.Series(values, index=pd.DatetimeIndex(dates))
+
+
+def cumulative_dividends(result: BacktestResult) -> pd.Series:
+    """Cumulative dividends received per date (date-indexed Series).
+
+    Multiple holdings can pay on the same ex-date; we keep the running total after the
+    last such payment so the index stays unique.
+    """
+    hist = result.history_df()
+    div = hist[hist["event"] == "dividend"][["date", "total_dividends"]]
+    if div.empty:
+        return pd.Series(dtype=float)
+    return div.groupby("date")["total_dividends"].last()
+
+
 def plot_dividends_over_time(
     real_dividends: pd.DataFrame | None,
     bucket_results: dict[str, BacktestResult],
@@ -139,10 +173,9 @@ def plot_dividends_over_time(
         ax.plot(real_series.index, real_series.values, label="Real (actual account)")
 
     for label, result in bucket_results.items():
-        hist = result.history_df()
-        div_hist = hist[hist["event"] == "dividend"][["date", "total_dividends"]]
-        if not div_hist.empty:
-            ax.plot(div_hist["date"], div_hist["total_dividends"], label=label)
+        series = cumulative_dividends(result)
+        if not series.empty:
+            ax.plot(series.index, series.values, label=label)
 
     ax.set_title("Cumulative dividends received")
     ax.set_ylabel("$")
@@ -160,21 +193,8 @@ def plot_value_over_time(
     fig, ax = plt.subplots(figsize=(9, 5))
 
     for label, (result, market_data) in bucket_results.items():
-        hist = result.history_df()
-        snapshots = hist.groupby("date")["shares"].last().sort_index()
-        dates, values = [], []
-        for date, shares in snapshots.items():
-            value = 0.0
-            for sym, qty in shares.items():
-                if qty <= 0:
-                    continue
-                prices = market_data[sym]["close"]
-                before = prices.index[prices.index <= date]
-                price = float(prices.loc[before[-1]]) if len(before) else float(prices.iloc[0])
-                value += qty * price
-            dates.append(date)
-            values.append(value)
-        ax.plot(dates, values, label=label)
+        series = value_over_time(result, market_data)
+        ax.plot(series.index, series.values, label=label)
 
     ax.set_title("Portfolio value over time")
     ax.set_ylabel("$")
