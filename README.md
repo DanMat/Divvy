@@ -153,6 +153,19 @@ uv run divvy import-1099 --pdf 2025-Consolidated-1099.pdf --out dividends_2025.c
 
 Every comparison also includes an **SPY benchmark** row by default (disable with `--benchmark none`, or pick another ticker with `--benchmark VTI`), and a **dividend-income-by-year** chart so you can see income *growth*, not just a lifetime total.
 
+### Realism knobs (optional)
+
+Model a taxable account, periodic rebalancing, and fund fees:
+
+```bash
+uv run divvy compare --contributions-csv my.csv --bucket buckets/mine.yaml \
+  --dividend-tax-rate 0.20 \   # reinvest only after-tax dividends; adds a net-income column
+  --rebalance annual \         # annual | quarterly | monthly (default: none, DRIP drifts)
+  --expense-ratio 0.0006       # annual fund fee applied to every holding (0.06%)
+```
+
+All three are also available in the Experiment Lab under **Realism (optional)**. Defaults leave behavior unchanged (tax-free DRIP, no rebalancing, no fees). The tax model is a flat-rate estimate — real dividend taxation (qualified vs. ordinary, brackets, state) is more nuanced.
+
 ---
 
 ## ⚠️ This is a backtester, not a crystal ball

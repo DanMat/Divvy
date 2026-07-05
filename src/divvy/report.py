@@ -167,6 +167,7 @@ def summarize(
                 "xirr_pct": _xirr(real_flows) * 100,
                 "max_drawdown_pct": float("nan"),
                 "annual_vol_pct": float("nan"),
+                "total_dividends_after_tax": real_dividends_total,
             }
         )
 
@@ -187,10 +188,15 @@ def summarize(
                 "xirr_pct": _xirr(flows) * 100,
                 "max_drawdown_pct": rm["max_drawdown_pct"],
                 "annual_vol_pct": rm["annual_vol_pct"],
+                "total_dividends_after_tax": result.total_dividends_after_tax,
             }
         )
 
-    return pd.DataFrame(rows)
+    df = pd.DataFrame(rows)
+    # Only surface the after-tax column when a tax rate actually changed something.
+    if "total_dividends_after_tax" in df and (df["total_dividends_after_tax"] == df["total_dividends"]).all():
+        df = df.drop(columns=["total_dividends_after_tax"])
+    return df
 
 
 def value_over_time(result: BacktestResult, market_data: dict[str, pd.DataFrame]) -> pd.Series:
