@@ -53,6 +53,67 @@ def trailing_dividends_from_ledger(dividends_actual: pd.DataFrame, as_of: pd.Tim
     return float(dividends_actual.loc[mask, "dividend"].sum())
 
 
+def bucket_nav(bucket: dict[str, float], market_data: dict[str, pd.DataFrame]) -> pd.Series:
+    """Growth-of-$1 total-return NAV for the bucket weights (daily-rebalanced, dividends reinvested).
+
+    Contribution-free by construction, so drawdown/volatility reflect the *basket's* risk rather
+    than the investor's cash-flow timing. Symbols are aligned on their common date window so that
+    holdings with different inception dates don't create a spurious jump.
+    """
+    if not bucket:
+        return pd.Series(dtype=float)
+    closes = pd.concat(
+        {sym: market_data[sym]["close"].astype(float) for sym in bucket}, axis=1, join="inner"
+    ).sort_index()
+    divs = (
+        pd.concat(
+            {
+                sym: (
+                    market_data[sym]["dividend"].astype(float)
+                    if "dividend" in market_data[sym]
+                    else market_data[sym]["close"] * 0.0
+                )
+                for sym in bucket
+            },
+            axis=1,
+            join="inner",
+        )
+        .reindex(closes.index)
+        .fillna(0.0)
+    )
+
+    daily_ret = (closes + divs) / closes.shift(1) - 1.0  # first row is NaN for every symbol
+    weights = pd.Series(bucket)
+    port = (daily_ret * weights).sum(axis=1)
+    if port.empty:
+        return pd.Series(dtype=float)
+    port.iloc[0] = 0.0  # baseline day
+    return (1.0 + port).cumprod()
+
+
+def risk_metrics(nav: pd.Series) -> dict[str, float]:
+    """Max drawdown % and annualized volatility % from a NAV series."""
+    if nav is None or len(nav) < 3:
+        return {"max_drawdown_pct": float("nan"), "annual_vol_pct": float("nan")}
+    max_dd = float((nav / nav.cummax() - 1.0).min() * 100)
+    daily_ret = nav.pct_change().dropna()
+    ann_vol = float(daily_ret.std() * (252**0.5) * 100)
+    return {"max_drawdown_pct": max_dd, "annual_vol_pct": ann_vol}
+
+
+def annual_dividends(result: BacktestResult) -> pd.Series:
+    """Dividend income received per calendar year (year-indexed Series)."""
+    hist = result.history_df()
+    div = hist[hist["event"] == "dividend"][["date", "total_dividends"]]
+    if div.empty:
+        return pd.Series(dtype=float)
+    per_date = div.groupby("date")["total_dividends"].last().sort_index()
+    incremental = per_date.diff()
+    incremental.iloc[0] = per_date.iloc[0]
+    incremental.index = pd.DatetimeIndex(incremental.index)
+    return incremental.groupby(incremental.index.year).sum()
+
+
 def dividend_cross_check(dividends_actual: pd.DataFrame, reference_totals: dict[int, float]) -> pd.DataFrame:
     """Compare parsed actual-dividend yearly totals against externally supplied reference totals (e.g. 1099s)."""
     by_year = dividends_actual.copy()
@@ -104,6 +165,8 @@ def summarize(
                 "ending_value": real_ending_value,
                 "total_return_pct": (real_ending_value - total_contributed) / total_contributed * 100,
                 "xirr_pct": _xirr(real_flows) * 100,
+                "max_drawdown_pct": float("nan"),
+                "annual_vol_pct": float("nan"),
             }
         )
 
@@ -112,6 +175,7 @@ def summarize(
         as_of = max(df.index.max() for df in market_data.values())
         flows = sorted(contrib_flows + [(as_of, ending_value)])
         trailing = _trailing_dividends_from_history(result.history_df(), as_of)
+        rm = risk_metrics(bucket_nav(result.bucket, market_data))
         rows.append(
             {
                 "variant": label,
@@ -121,6 +185,8 @@ def summarize(
                 "ending_value": ending_value,
                 "total_return_pct": (ending_value - result.total_contributed) / result.total_contributed * 100,
                 "xirr_pct": _xirr(flows) * 100,
+                "max_drawdown_pct": rm["max_drawdown_pct"],
+                "annual_vol_pct": rm["annual_vol_pct"],
             }
         )
 
@@ -205,6 +271,25 @@ def plot_value_over_time(
     plt.close(fig)
 
 
+def plot_annual_dividends(
+    bucket_results: dict[str, BacktestResult],
+    out_path: Path,
+) -> None:
+    per_variant = {label: annual_dividends(result) for label, result in bucket_results.items()}
+    per_variant = {k: v for k, v in per_variant.items() if not v.empty}
+    if not per_variant:
+        return
+    frame = pd.concat(per_variant, axis=1).fillna(0.0)
+    fig, ax = plt.subplots(figsize=(9, 5))
+    frame.plot(kind="bar", ax=ax)
+    ax.set_title("Dividend income by year")
+    ax.set_ylabel("$")
+    ax.set_xlabel("Year")
+    fig.tight_layout()
+    fig.savefig(out_path)
+    plt.close(fig)
+
+
 def _df_to_markdown(df: pd.DataFrame) -> str:
     header = "| " + " | ".join(df.columns) + " |"
     sep = "| " + " | ".join(["---"] * len(df.columns)) + " |"
@@ -222,7 +307,11 @@ def write_report(out_dir: Path, summary: pd.DataFrame, cross_check: pd.DataFrame
     lines = ["# Divvy backtest report", "", "## Summary", _df_to_markdown(summary), ""]
     if cross_check is not None and not cross_check.empty:
         lines += ["## Dividend cross-check vs reference (e.g. 1099s)", _df_to_markdown(cross_check), ""]
-    lines += ["![Cumulative dividends](dividends.png)", "![Portfolio value](value.png)"]
+    lines += [
+        "![Cumulative dividends](dividends.png)",
+        "![Portfolio value](value.png)",
+        "![Dividend income by year](annual_dividends.png)",
+    ]
 
     report_path = out_dir / "report.md"
     report_path.write_text("\n".join(lines))

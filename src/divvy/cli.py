@@ -61,6 +61,11 @@ def cmd_compare(args: argparse.Namespace) -> None:
         result = run_backtest(contributions, bucket, data)
         variants[bucket_path.stem] = (result, data)
 
+    benchmark = (args.benchmark or "").strip().upper()
+    if benchmark and benchmark != "NONE":
+        bdata = market_data.load_bucket_data([benchmark], history_start, cache_dir)
+        variants[f"{benchmark} (benchmark)"] = (run_backtest(contributions, {benchmark: 1.0}, bdata), bdata)
+
     summary = report.summarize(contributions, bucket_results=variants, real=real)
 
     cross_check = None
@@ -71,6 +76,7 @@ def cmd_compare(args: argparse.Namespace) -> None:
     out_dir.mkdir(parents=True, exist_ok=True)
     report.plot_dividends_over_time(dividends, {k: v[0] for k, v in variants.items()}, out_dir / "dividends.png")
     report.plot_value_over_time(variants, out_dir / "value.png")
+    report.plot_annual_dividends({k: v[0] for k, v in variants.items()}, out_dir / "annual_dividends.png")
     report_path = report.write_report(out_dir, summary, cross_check)
 
     print(summary.to_string(index=False))
@@ -122,6 +128,11 @@ def main() -> None:
     compare.add_argument("--synthetic-start", help="Start date for --synthetic-monthly (YYYY-MM-DD)")
     compare.add_argument("--synthetic-end", help="End date for --synthetic-monthly (default: today)")
     compare.add_argument("--bucket", action="append", required=True, help="Bucket YAML path (repeatable)")
+    compare.add_argument(
+        "--benchmark",
+        default="SPY",
+        help="Ticker to include as a benchmark row (default SPY; pass 'none' to disable)",
+    )
     compare.add_argument("--cache-dir", default="data/cache")
     compare.add_argument("--out", default="results")
     compare.add_argument(

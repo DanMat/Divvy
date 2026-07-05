@@ -148,6 +148,10 @@ uv run divvy import-1099 --pdf 2025-Consolidated-1099.pdf --out dividends_2025.c
 | `ending_value` | Portfolio value today |
 | `total_return_pct` | `(ending_value − contributed) / contributed` |
 | `xirr_pct` | Money-weighted annualized return (accounts for contribution timing) |
+| `max_drawdown_pct` | Worst peak-to-trough drop of the basket (its own risk, independent of your cash-flow timing) |
+| `annual_vol_pct` | Annualized volatility of the basket — lower is calmer |
+
+Every comparison also includes an **SPY benchmark** row by default (disable with `--benchmark none`, or pick another ticker with `--benchmark VTI`), and a **dividend-income-by-year** chart so you can see income *growth*, not just a lifetime total.
 
 ---
 
