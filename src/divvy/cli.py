@@ -107,13 +107,50 @@ def cmd_import_1099(args: argparse.Namespace) -> None:
     print(by_year.round(2).to_string())
 
 
+def cmd_project(args: argparse.Namespace) -> None:
+    from divvy import project
+
+    inp = project.ProjectionInputs(
+        annual_income_after_tax=args.income * 12,
+        tax_rate=args.tax_rate,
+        portfolio_yield=args.yield_pct,
+        current_value=args.current_value,
+        horizons=(args.years,),
+    )
+    target = project.target_portfolio_value(args.income * 12, args.tax_rate, args.yield_pct)
+    print(f"Goal: ${args.income:,.0f}/mo after tax -> portfolio target ~${target:,.0f} at {args.yield_pct:.1%} yield\n")
+
+    print("Required monthly contribution (deterministic):")
+    for row in project.sensitivity_grid(inp):
+        cols = "  ".join(
+            f"@{k.replace('return_', '').replace('pct', '%')}: ${v:,.0f}/mo"
+            for k, v in row.items()
+            if k.startswith("return_")
+        )
+        print(f"  {row['years']}yr: {cols}")
+
+    mc = project.monte_carlo_ending_value(
+        current_value=args.current_value,
+        monthly_contribution=args.monthly,
+        years=args.years,
+        annual_return_mean=args.return_mean,
+        annual_return_std=args.return_std,
+    )
+    print(f"\nMonte Carlo: investing ${args.monthly:,.0f}/mo for {args.years}yr")
+    print(f"  (return ~N({args.return_mean:.0%}, sd {args.return_std:.0%}), 10k sims)")
+    print(f"  Ending value  p10 ${mc['p10']:,.0f}  |  p50 ${mc['p50']:,.0f}  |  p90 ${mc['p90']:,.0f}")
+    for label, key in [("pessimistic (p10)", "p10"), ("median (p50)", "p50"), ("optimistic (p90)", "p90")]:
+        income = mc[key] * args.yield_pct * (1 - args.tax_rate) / 12
+        print(f"    {label}: ~${income:,.0f}/mo after-tax dividends")
+
+
 def cmd_ui(args: argparse.Namespace) -> None:
     import importlib.util
     import subprocess
     import sys
 
     if importlib.util.find_spec("streamlit") is None:
-        raise SystemExit("The UI needs Streamlit. Install it with: pip install 'divvy[ui]'")
+        raise SystemExit("The UI needs Streamlit. Install it with: pip install 'divvy-backtest[ui]'")
 
     ui_path = importlib.util.find_spec("divvy.ui").origin
     cmd = [sys.executable, "-m", "streamlit", "run", ui_path]
@@ -178,6 +215,17 @@ def main() -> None:
     imp.add_argument("--pdf", required=True, help="Path to a Fidelity Consolidated 1099 PDF")
     imp.add_argument("--out", required=True, help="Output CSV path (date,symbol,dividend)")
     imp.set_defaults(func=cmd_import_1099)
+
+    proj = sub.add_parser("project", help="Project how much to invest monthly to reach a dividend-income goal")
+    proj.add_argument("--income", type=float, required=True, help="Target monthly dividend income (after tax)")
+    proj.add_argument("--current-value", type=float, default=0.0, help="Current portfolio value")
+    proj.add_argument("--monthly", type=float, default=500.0, help="Planned monthly contribution (for Monte Carlo)")
+    proj.add_argument("--years", type=int, default=25)
+    proj.add_argument("--yield-pct", type=float, default=0.035, help="Assumed portfolio dividend yield (e.g. 0.035)")
+    proj.add_argument("--tax-rate", type=float, default=0.15, help="Assumed dividend tax rate")
+    proj.add_argument("--return-mean", type=float, default=0.08, help="Assumed mean annual total return")
+    proj.add_argument("--return-std", type=float, default=0.15, help="Assumed annual return volatility")
+    proj.set_defaults(func=cmd_project)
 
     ui = sub.add_parser("ui", help="Launch the interactive Portfolio Experiment Lab in your browser")
     ui.add_argument("--port", type=int, help="Port for the local Streamlit server (optional)")

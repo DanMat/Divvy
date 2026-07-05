@@ -1,12 +1,23 @@
 [project]
-name = "divvy"
+name = "divvy-backtest"
 version = "0.1.0"
 description = "Replay your actual brokerage transaction history against a counterfactual portfolio bucket and compare dividend income + returns."
 readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
 authors = [
     { name = "DanMat", email = "dannymatthew@gmail.com" }
 ]
 requires-python = ">=3.12"
+keywords = ["dividends", "investing", "backtest", "portfolio", "finance", "etf", "drip", "xirr"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Financial and Insurance Industry",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Office/Business :: Financial :: Investment",
+    "Operating System :: OS Independent",
+]
 dependencies = [
     "pandas>=3.0.3",
     "yfinance>=0.2.40",
@@ -14,6 +25,11 @@ dependencies = [
     "matplotlib>=3.11.0",
     "pyarrow>=24.0.0",
 ]
+
+[project.urls]
+Homepage = "https://github.com/DanMat/Divvy"
+Repository = "https://github.com/DanMat/Divvy"
+Issues = "https://github.com/DanMat/Divvy/issues"
 
 [project.optional-dependencies]
 dev = ["pytest>=8.0", "ruff>=0.6"]
@@ -26,6 +42,12 @@ divvy = "divvy.cli:main"
 [build-system]
 requires = ["uv_build>=0.11.26,<0.12.0"]
 build-backend = "uv_build"
+
+# Distribution is "divvy-backtest" (the name "divvy" is taken on PyPI), but the import
+# package and CLI stay "divvy".
+[tool.uv.build-backend]
+module-name = "divvy"
+module-root = "src"
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]
