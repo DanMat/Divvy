@@ -1,6 +1,6 @@
 [project]
 name = "divvy-backtest"
-version = "0.1.0"
+version = "0.2.0"
 description = "Replay your actual brokerage transaction history against a counterfactual portfolio bucket and compare dividend income + returns."
 readme = "README.md"
 license = "MIT"
