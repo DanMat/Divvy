@@ -8,6 +8,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+import numpy as np
+
 
 def target_portfolio_value(
     annual_income_after_tax: float,
@@ -77,3 +79,38 @@ def sensitivity_grid(inp: ProjectionInputs) -> list[dict]:
             row[f"return_{int(r * 100)}pct"] = round(required_monthly_contribution(target, inp.current_value, r, years))
         rows.append(row)
     return rows
+
+
+def monte_carlo_ending_value(
+    current_value: float,
+    monthly_contribution: float,
+    years: int,
+    annual_return_mean: float,
+    annual_return_std: float,
+    n_sims: int = 10_000,
+    seed: int | None = 42,
+) -> dict[str, float]:
+    """Distribution of ending portfolio values when monthly returns are random, not fixed.
+
+    Draws monthly returns from a normal distribution (mean = annual_return_mean/12,
+    sd = annual_return_std/sqrt(12)) so the deterministic single-number projection becomes a
+    range. Returns percentiles (p10/p25/p50/p75/p90) and the mean of the ending value.
+    """
+    rng = np.random.default_rng(seed)
+    months = years * 12
+    monthly_mean = annual_return_mean / 12.0
+    monthly_std = annual_return_std / (12.0**0.5)
+
+    draws = rng.normal(monthly_mean, monthly_std, size=(n_sims, months))
+    value = np.full(n_sims, float(current_value))
+    for m in range(months):
+        value = value * (1.0 + draws[:, m]) + monthly_contribution
+    pct = np.percentile(value, [10, 25, 50, 75, 90])
+    return {
+        "p10": float(pct[0]),
+        "p25": float(pct[1]),
+        "p50": float(pct[2]),
+        "p75": float(pct[3]),
+        "p90": float(pct[4]),
+        "mean": float(value.mean()),
+    }

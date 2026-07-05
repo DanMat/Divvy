@@ -348,7 +348,7 @@ wheels = [
 ]
 
 [[package]]
-name = "divvy"
+name = "divvy-backtest"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [

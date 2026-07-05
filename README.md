@@ -44,6 +44,15 @@ No off-the-shelf tool does this. They all assume a clean, synthetic contribution
 
 ---
 
+## Install
+
+```bash
+pip install divvy-backtest          # core CLI (import + command are 'divvy')
+pip install 'divvy-backtest[ui]'    # + interactive Experiment Lab
+```
+
+Or run from source with [uv](https://github.com/astral-sh/uv): `uv sync`.
+
 ## ⚡ Quickstart (no data required)
 
 Backtest a hypothetical "$500/month since 2019" into a couple of dividend baskets:
@@ -73,7 +82,7 @@ dividend_etf_core             7200.0           764.12                   294.02  
 Prefer sliders to flags? Launch the local web app and tweak portfolios live — add/remove tickers, drag weights, and watch the comparison table and charts update:
 
 ```bash
-pip install 'divvy[ui]'   # or: uv sync --extra ui
+pip install 'divvy-backtest[ui]'   # or: uv sync --extra ui
 uv run divvy ui
 ```
 
@@ -130,7 +139,7 @@ uv run divvy compare \
 To reconstruct the dividend income you actually received from a Consolidated 1099 PDF (as a comparison baseline):
 
 ```bash
-pip install 'divvy[pdf]'
+pip install 'divvy-backtest[pdf]'
 uv run divvy import-1099 --pdf 2025-Consolidated-1099.pdf --out dividends_2025.csv
 ```
 
@@ -165,6 +174,16 @@ uv run divvy compare --contributions-csv my.csv --bucket buckets/mine.yaml \
 ```
 
 All three are also available in the Experiment Lab under **Realism (optional)**. Defaults leave behavior unchanged (tax-free DRIP, no rebalancing, no fees). The tax model is a flat-rate estimate — real dividend taxation (qualified vs. ordinary, brackets, state) is more nuanced.
+
+## Project a future income goal
+
+How much must you invest monthly to reach a target dividend income? `divvy project` gives both a deterministic estimate and a **Monte Carlo** range (returns are random, not a single guess):
+
+```bash
+uv run divvy project --income 2000 --current-value 7500 --monthly 1000 --years 25
+```
+
+Outputs the required contribution across return assumptions, plus p10/p50/p90 ending-value and after-tax-income scenarios. Like all projections, these are assumption-driven ranges, not predictions.
 
 ---
 

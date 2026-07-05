@@ -59,7 +59,7 @@ def parse_1099_pdf(path: str | Path) -> pd.DataFrame:
     try:
         from pypdf import PdfReader
     except ImportError as exc:  # pragma: no cover - dependency hint
-        raise ImportError("PDF import needs pypdf. Install with: pip install 'divvy[pdf]'") from exc
+        raise ImportError("PDF import needs pypdf. Install with: pip install 'divvy-backtest[pdf]'") from exc
 
     reader = PdfReader(str(path))
     text = "\n".join(page.extract_text() or "" for page in reader.pages)
